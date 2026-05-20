@@ -45,11 +45,11 @@ gst-launch-1.0 -e \
     sink_0::xpos="$CAM1_X" sink_0::ypos="$CAM1_Y" sink_0::width="$CAM1_W" sink_0::height="$CAM1_H" \
     sink_1::xpos="$CAM2_X" sink_1::ypos="$CAM2_Y" sink_1::width="$CAM2_W" sink_1::height="$CAM2_H" \
   ! kmssink sync=false \
-  rtspsrc location="$CAM1_URL" latency=100 protocols=tcp \
+  rtspsrc location="$CAM1_URL" latency=200 \
     ! $CAM1_DECODE \
     ! videoconvert ! videoscale \
     ! "video/x-raw,width=$CAM1_W,height=$CAM1_H" ! comp.sink_0 \
-  rtspsrc location="$CAM2_URL" latency=100 protocols=tcp \
+  rtspsrc location="$CAM2_URL" latency=200 \
     ! $CAM2_DECODE \
     ! videoconvert ! videoscale \
     ! "video/x-raw,width=$CAM2_W,height=$CAM2_H" ! comp.sink_1
