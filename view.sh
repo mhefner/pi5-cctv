@@ -10,13 +10,16 @@ if [[ "$CAM1_URL" == *"192.168.1.x"* ]] || [[ "$CAM2_URL" == *"192.168.1.x"* ]];
   exit 1
 fi
 
-# Choose decoder: prefer hardware (Pi 5 V4L2), fall back to software
-if [[ "$1" == "--sw" ]]; then
-  DECODER="avdec_h264"
-  echo "Using software decoder (avdec_h264)"
-else
+# Auto-detect best available decoder: hardware > openh264 > fail with hint
+if gst-inspect-1.0 v4l2h264dec &>/dev/null; then
   DECODER="v4l2h264dec"
-  echo "Using hardware decoder (v4l2h264dec) — pass --sw to force software decode"
+  echo "Using hardware decoder (v4l2h264dec)"
+elif gst-inspect-1.0 openh264dec &>/dev/null; then
+  DECODER="openh264dec"
+  echo "Using software decoder (openh264dec)"
+else
+  echo "Error: no H.264 decoder found. Run: sudo apt install gstreamer1.0-plugins-bad"
+  exit 1
 fi
 
 echo "Starting dual RTSP view (Ctrl+C to stop)..."
