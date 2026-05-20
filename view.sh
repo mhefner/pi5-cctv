@@ -34,11 +34,17 @@ decode_chain() {
 }
 
 CAM1_DECODE=$(decode_chain "${CAM1_CODEC:-h264}")
-CAM2_DECODE=$(decode_chain "${CAM2_CODEC:-h264}")
+CAM2_FPS="${CAM2_FPS:-25}"
 
 echo "CAM1 [${CAM1_CODEC:-h264}]: $CAM1_DECODE"
-echo "CAM2 [${CAM2_CODEC:-h264}]: $CAM2_DECODE"
+echo "CAM2 [${CAM2_CODEC:-h265}]: ffmpeg → raw pipe → GStreamer (${CAM2_FPS}fps)"
 echo "Starting dual RTSP view (Ctrl+C to stop)..."
+
+# CAM2: ffmpeg decodes RTSP and writes raw I420 frames to fd 3.
+# GStreamer's rtspsrc can't negotiate SETUP with this camera; ffmpeg can.
+exec 3< <(ffmpeg -rtsp_transport tcp -i "$CAM2_URL" \
+  -vf "scale=${CAM2_W}:${CAM2_H}" \
+  -f rawvideo -pix_fmt yuv420p - 2>/dev/null)
 
 gst-launch-1.0 -e \
   compositor name=comp \
@@ -49,7 +55,6 @@ gst-launch-1.0 -e \
     ! $CAM1_DECODE \
     ! videoconvert ! videoscale \
     ! "video/x-raw,width=$CAM1_W,height=$CAM1_H" ! comp.sink_0 \
-  rtspsrc location="$CAM2_URL" latency=200 \
-    ! $CAM2_DECODE \
-    ! videoconvert ! videoscale \
-    ! "video/x-raw,width=$CAM2_W,height=$CAM2_H" ! comp.sink_1
+  fdsrc fd=3 do-timestamp=true \
+    ! "video/x-raw,format=I420,width=$CAM2_W,height=$CAM2_H,framerate=$CAM2_FPS/1" \
+    ! videoconvert ! comp.sink_1
